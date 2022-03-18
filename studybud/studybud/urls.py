@@ -21,3 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('base.urls')),
 ]
+
+
+#https://youtu.be/PtQiiknWUcI?t=2396

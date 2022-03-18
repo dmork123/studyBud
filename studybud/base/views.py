@@ -1,10 +1,11 @@
-from django.http import HttpResponse
 from django.shortcuts import render
 
 # Create your views here.
 
+
+
 def home(request):
-    return HttpResponse('HOME PAGE')
+    return render(request, 'home.html')
 
 def room(request):
-    return HttpResponse('room page')
+    return render(request,'room.html')
