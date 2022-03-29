@@ -1,5 +1,11 @@
-from unicodedata import name
+from http.client import HTTPResponse
+from django.http import HttpResponse
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.shortcuts import render, redirect
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
 from .models import Room, Topic
 from .forms import RoomForm
 
@@ -11,36 +17,71 @@ from .forms import RoomForm
 #     {'id': 3, 'name': 'Front end developers'},
 # ]
 
+def loginPage(request):
+    if request.method=='POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        print("username: ", username)
+        print("pass: ", password)
+        try:
+            user = User.objects.get(username=username)
+        except:
+            messages.error(request, "User does not exist")
+
+        user = authenticate(username=username, password=password)
+
+        print(user)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        else:
+            messages.error(request, "Username Or Password does not exist")
+    context={}
+    return render(request, 'base/login_register.html', context)
+
+def logoutUser(request):
+    logout(request)
+    return redirect('home')
 
 def home(request):
     q = request.GET.get('q') if request.GET.get('q') != None else ''
 
-    rooms = Room.objects.filter(topic__name__icontains=q) # icontains i(sensitive value) we put that for empty string
-    
+    rooms = Room.objects.filter(Q(topic__name__icontains=q) |
+                                # icontains i(sensitive value) we put that for empty string
+                                Q(name__icontains=q) |
+                                Q(description__icontains=q)
+                                )
     topics = Topic.objects.all()
-
-    context = {'rooms': rooms, 'topics': topics}
+    room_count = rooms.count()
+    context = {'rooms': rooms, 'topics': topics, 'room_count': room_count}
     return render(request, 'base/home.html', context)
+
 
 def room(request, pk):
     room = Room.objects.get(id=pk)
-    context  = {'room': room}
-    return render(request,'base/room.html', context)
+    context = {'room': room}
+    return render(request, 'base/room.html', context)
 
+@login_required(login_url='login')
 def createRoom(request):
     form = RoomForm()
     if request.method == 'POST':
-        form = RoomForm(request.POST) # add data to form
+        form = RoomForm(request.POST)  # add data to form
         if form.is_valid():
             form.save()
             return redirect('home')
-    
+
     context = {'form': form}
     return render(request, 'base/room_form.html', context=context)
 
+@login_required(login_url='login')
 def updateRoom(request, pk):
     room = Room.objects.get(id=pk)
     form = RoomForm(instance=room)
+
+    if request.user != room.host:
+        return HttpResponse('You are not allowed here!')
+
     context = {'form': form}
 
     if request.method == 'POST':
@@ -51,9 +92,15 @@ def updateRoom(request, pk):
 
     return render(request, 'base/room_form.html', context)
 
+@login_required(login_url='login')
 def deleteRoom(request, pk):
     room = Room.objects.get(id=pk)
+    if request.user != room.host:
+        return HttpResponse('You are not allowed here!')
+
     if request.method == 'POST':
         room.delete()
         return redirect('home')
     return render(request, 'base/delete.html', {'obj': room})
+
+# https://youtu.be/PtQiiknWUcI?t=10015
