@@ -14,7 +14,7 @@ class Room(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True) # one room can have one topic but you can have multtiple topics in different rooms
     name = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
-    # participants = models
+    participants = models.ManyToManyField(User, related_name='participants', blank=True)
     updated = models.DateTimeField(auto_now=True) # takes a snapshot everytime there is an update
     created = models.DateTimeField(auto_now_add=True) # only takes a snapshot when we create this instance
     
